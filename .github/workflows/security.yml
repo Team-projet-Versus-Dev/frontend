@@ -1,0 +1,99 @@
+---
+name: Frontend Security Scan
+
+'on':
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # -----------------------------
+      # NODE.JS SETUP
+      # -----------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # -----------------------------
+      # LINTING & TYPE CHECKING
+      # -----------------------------
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check TypeScript
+        run: npx tsc -b
+
+      # -----------------------------
+      # BUILD TEST
+      # -----------------------------
+      - name: Build application
+        run: npm run build
+
+      # -----------------------------
+      # GITLEAKS (secrets scanning)
+      # -----------------------------
+      - name: Install gitleaks
+        run: |
+          curl -s \
+            https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
+          | grep "browser_download_url.*linux_x64.tar.gz" \
+          | cut -d '"' -f 4 \
+          | wget -qi-
+          tar -xzf gitleaks*.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Run gitleaks scan
+        run: gitleaks detect --source=. --no-git --verbose
+
+      # -----------------------------
+      # NPM AUDIT (vulnérabilités)
+      # -----------------------------
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      # -----------------------------
+      # TRIVY (scan dépendances)
+      # -----------------------------
+      - name: Trivy - Dependencies Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          scanners: vuln,secret,misconfig
+
+      # -----------------------------
+      # SNYK (optionnel - nécessite token)
+      # -----------------------------
+      # - name: Run Snyk to check for vulnerabilities
+      #   uses: snyk/actions/node@master
+      #   env:
+      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      #   with:
+      #     args: --severity-threshold=high
+
+      # -----------------------------
+      # LIGHTHOUSE CI (performance/security)
+      # -----------------------------
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            http://localhost:4173
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        continue-on-error: true
