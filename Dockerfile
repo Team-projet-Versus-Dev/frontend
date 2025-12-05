@@ -1,25 +1,26 @@
-# docker/frontend.Dockerfile
 ###################################
 # build stage
 ###################################
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Contexte = frontend/, donc package*.json sont ici
+# 1) Installer les dépendances
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
-# On copie tout le code du frontend
+# 2) Copier le reste du code
 COPY . .
+
+# 3) Build de l'app (Vite)
 RUN npm run build
 
 ###################################
-# production (serve)
+# production stage
 ###################################
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# On utilise 'serve' pour servir le build Vite
+# on utilise 'serve' pour servir le build statique
 RUN npm install -g serve
 
 COPY --from=build /app/dist ./dist
