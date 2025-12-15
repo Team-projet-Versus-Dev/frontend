@@ -1,3 +1,8 @@
+/**
+ * API d'authentification
+ * Gestion sécurisée des appels au backend pour login/signup
+ */
+
 export type AuthResponse = {
   user: {
     id: number;
@@ -7,19 +12,29 @@ export type AuthResponse = {
   accessToken: string;
 };
 
-const API_BASE = "http://localhost:3000";
+// URL de base de l'API (avec le préfixe /api)
+const API_BASE = "http://localhost:3000/api";
 
 // --- Helpers sécurité/robustesse ---
-function normalizeEmail(email: string) {
+
+/**
+ * Normalise l'email (trim + lowercase)
+ */
+function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-function isValidEmail(email: string) {
-  // simple + efficace (évite regex trop permissive)
+/**
+ * Validation basique du format email
+ */
+function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-async function safeReadJson(res: Response) {
+/**
+ * Lecture sécurisée du JSON de réponse
+ */
+async function safeReadJson(res: Response): Promise<unknown> {
   try {
     return await res.json();
   } catch {
@@ -27,15 +42,25 @@ async function safeReadJson(res: Response) {
   }
 }
 
-function extractErrorMessage(errorBody: any): string | null {
-  // Nest peut renvoyer message: string | string[]
-  const msg = errorBody?.message;
+/**
+ * Extraction du message d'erreur depuis le corps de la réponse
+ */
+function extractErrorMessage(errorBody: unknown): string | null {
+  if (typeof errorBody !== 'object' || errorBody === null) return null;
+  
+  const body = errorBody as Record<string, unknown>;
+  const msg = body.message;
+  
   if (typeof msg === "string") return msg;
   if (Array.isArray(msg)) return msg.filter((x) => typeof x === "string").join(", ");
-  if (typeof errorBody?.error === "string") return errorBody.error;
+  if (typeof body.error === "string") return body.error;
+  
   return null;
 }
 
+/**
+ * Wrapper fetch avec timeout et gestion d'erreurs
+ */
 async function fetchJson<T>(
   url: string,
   options: RequestInit & { timeoutMs?: number } = {}
@@ -49,9 +74,8 @@ async function fetchJson<T>(
     const res = await fetch(url, {
       ...init,
       signal: controller.signal,
-      // sécurité/robustesse
       cache: "no-store",
-      credentials: "same-origin", // si un jour tu passes en cookies httpOnly
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
         ...(init.headers ?? {}),
@@ -62,7 +86,6 @@ async function fetchJson<T>(
       const errorBody = await safeReadJson(res);
       const serverMsg = extractErrorMessage(errorBody);
 
-      // messages “propres” côté UI
       if (res.status === 400) throw new Error(serverMsg ?? "Requête invalide.");
       if (res.status === 401) throw new Error(serverMsg ?? "Email ou mot de passe incorrect.");
       if (res.status === 403) throw new Error(serverMsg ?? "Accès refusé.");
@@ -73,8 +96,8 @@ async function fetchJson<T>(
     }
 
     return (await res.json()) as T;
-  } catch (e: any) {
-    if (e?.name === "AbortError") {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === "AbortError") {
       throw new Error("Le serveur met trop de temps à répondre (timeout).");
     }
     throw e;
@@ -83,27 +106,43 @@ async function fetchJson<T>(
   }
 }
 
+/**
+ * Inscription d'un nouvel utilisateur
+ * POST /api/auth/signup
+ */
 export async function register(email: string, password: string): Promise<AuthResponse> {
-  const e = normalizeEmail(email);
+  const normalizedEmail = normalizeEmail(email);
 
-  // Validation front (n’empêche pas la validation backend)
-  if (!isValidEmail(e)) throw new Error("Email invalide.");
-  if (password.length < 8) throw new Error("Mot de passe trop court (8 caractères minimum).");
+  // Validation côté client (le backend valide aussi)
+  if (!isValidEmail(normalizedEmail)) {
+    throw new Error("Email invalide.");
+  }
+  if (password.length < 8) {
+    throw new Error("Mot de passe trop court (8 caractères minimum).");
+  }
 
-  return fetchJson<AuthResponse>(`${API_BASE}/auth/register`, {
+  return fetchJson<AuthResponse>(`${API_BASE}/auth/signup`, {
     method: "POST",
-    body: JSON.stringify({ email: e, password }),
+    body: JSON.stringify({ email: normalizedEmail, password }),
   });
 }
 
+/**
+ * Connexion d'un utilisateur existant
+ * POST /api/auth/login
+ */
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const e = normalizeEmail(email);
+  const normalizedEmail = normalizeEmail(email);
 
-  if (!isValidEmail(e)) throw new Error("Email invalide.");
-  if (!password) throw new Error("Mot de passe requis.");
+  if (!isValidEmail(normalizedEmail)) {
+    throw new Error("Email invalide.");
+  }
+  if (!password) {
+    throw new Error("Mot de passe requis.");
+  }
 
   return fetchJson<AuthResponse>(`${API_BASE}/auth/login`, {
     method: "POST",
-    body: JSON.stringify({ email: e, password }),
+    body: JSON.stringify({ email: normalizedEmail, password }),
   });
 }
