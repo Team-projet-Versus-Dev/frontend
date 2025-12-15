@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowLeft, Users } from "lucide-react";
+import SafeText from "../component/SafeText";
 import type { Versus } from "../types/versus";
 
 type VersusDetailPageProps = {

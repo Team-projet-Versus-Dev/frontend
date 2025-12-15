@@ -4,7 +4,11 @@ import App from "./App";
 import "./index.css";
 import Footer from "./component/footer";
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+const root = ReactDOM.createRoot(
+  document.getElementById("root") as HTMLElement
+);
+
+root.render(
   <React.StrictMode>
     <App />
     <Footer />

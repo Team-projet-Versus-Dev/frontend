@@ -1,21 +1,31 @@
 import React, { useState } from "react";
-import { User, TrendingUp } from "lucide-react";
+import { User, TrendingUp, LogIn } from "lucide-react";
 import type { Versus } from "../types/versus";
 
 type HomePageProps = {
-  versusItems: Versus[];                      // ✅ vient de App.tsx
+  versusItems: Versus[];
   onSelectVersus: (versus: Versus) => void;
   onCreateVersus: () => void;
+
+  // ✅ ajoutés pour matcher App.tsx
+  onOpenLogin: () => void;
+  onOpenProfile: () => void;
+  currentUserEmail?: string;
 };
 
 const HomePage: React.FC<HomePageProps> = ({
   versusItems,
   onSelectVersus,
   onCreateVersus,
+  onOpenLogin,
+  onOpenProfile,
+  currentUserEmail,
 }) => {
-  const [activeTab, setActiveTab] = useState<"populaire" | "recent" | "tendance">(
+  const [activeTab, setActiveTab] = useState<"populaire">(
     "populaire"
   );
+
+  const isLoggedIn = Boolean(currentUserEmail);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,14 +40,35 @@ const HomePage: React.FC<HomePageProps> = ({
           </div>
 
           <div className="flex items-center gap-4">
-            <button onClick={onCreateVersus} className="px-4 py-2 text-sm font-medium bg-black text-white rounded-lg hover:bg-gray-900">
+            <button
+              onClick={onCreateVersus}
+              className="px-4 py-2 text-sm font-medium bg-black text-white rounded-lg hover:bg-gray-900"
+              type="button"
+            >
               Créer un questionnaire
             </button>
 
-            <button className="flex items-center gap-2 text-gray-700 hover:text-gray-900">
-              <User className="w-5 h-5" />
-              <span className="text-sm">Utilisateur</span>
-            </button>
+            {/* ✅ bouton login/profil selon auth */}
+            {!isLoggedIn ? (
+              <button
+                onClick={onOpenLogin}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                type="button"
+              >
+                <LogIn className="w-5 h-5" />
+                <span className="text-sm">Se connecter</span>
+              </button>
+            ) : (
+              <button
+                onClick={onOpenProfile}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                type="button"
+                title={currentUserEmail}
+              >
+                <User className="w-5 h-5" />
+                <span className="text-sm">Profil</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -51,7 +82,6 @@ const HomePage: React.FC<HomePageProps> = ({
             et crée tes propres questions.
           </p>
 
-          {/* Stats (pour l'instant statiques, ce n’est pas grave) */}
           <div className="flex justify-center gap-12 mt-8">
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
@@ -65,6 +95,12 @@ const HomePage: React.FC<HomePageProps> = ({
               <div className="text-2xl font-bold text-gray-900">324</div>
             </div>
           </div>
+
+          {isLoggedIn && (
+            <p className="mt-4 text-xs text-gray-500">
+              Connecté en tant que <span className="font-medium">{currentUserEmail}</span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -79,28 +115,9 @@ const HomePage: React.FC<HomePageProps> = ({
                   ? "border-black text-black"
                   : "border-transparent text-gray-600 hover:text-gray-900"
               }`}
+              type="button"
             >
               Populaire
-            </button>
-            <button
-              onClick={() => setActiveTab("recent")}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === "recent"
-                  ? "border-black text-black"
-                  : "border-transparent text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Récent
-            </button>
-            <button
-              onClick={() => setActiveTab("tendance")}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === "tendance"
-                  ? "border-black text-black"
-                  : "border-transparent text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Tendance
             </button>
           </div>
         </div>
@@ -121,6 +138,7 @@ const HomePage: React.FC<HomePageProps> = ({
                 key={item.id}
                 onClick={() => onSelectVersus(item)}
                 className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow text-left"
+                type="button"
               >
                 <div className="text-xs font-medium text-gray-500 mb-4">
                   {item.category}
