@@ -30,10 +30,7 @@ const HomePage: React.FC<HomePageProps> = ({
           </div>
 
           <div className="flex items-center gap-4">
-            <button
-              onClick={onCreateVersus}
-              className="px-4 py-2 text-sm font-medium bg-black text-white rounded-lg hover:bg-gray-900"
-            >
+            <button onClick={onCreateVersus} className="px-4 py-2 text-sm font-medium bg-black text-white rounded-lg hover:bg-gray-900">
               Créer un questionnaire
             </button>
 
