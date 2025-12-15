@@ -1,4 +1,3 @@
-
 import React from "react";
 
 type ProfilePageProps = {
@@ -85,7 +84,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack, onLogout }) => 
               <p className="text-gray-500 mb-1">Nom d'utilisateur</p>
               <input
                 disabled
-                value={"Utilisateur"}
+                defaultValue="Utilisateur"
                 className="w-full rounded-lg bg-gray-100 p-2"
               />
             </div>
@@ -93,7 +92,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack, onLogout }) => 
               <p className="text-gray-500 mb-1">Email</p>
               <input
                 disabled
-                value={user.email}
+                defaultValue={user.email}
                 className="w-full rounded-lg bg-gray-100 p-2"
               />
             </div>
@@ -101,7 +100,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack, onLogout }) => 
               <p className="text-gray-500 mb-1">Date de naissance</p>
               <input
                 disabled
-                value="Non renseignée"
+                defaultValue="Non renseignée"
                 className="w-full rounded-lg bg-gray-100 p-2"
               />
             </div>
@@ -109,7 +108,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack, onLogout }) => 
               <p className="text-gray-500 mb-1">Localisation</p>
               <input
                 disabled
-                value="Non renseignée"
+                defaultValue="Non renseignée"
                 className="w-full rounded-lg bg-gray-100 p-2"
               />
             </div>
@@ -117,10 +116,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack, onLogout }) => 
               <p className="text-gray-500 mb-1">Bio</p>
               <textarea
                 disabled
+                defaultValue="Aucune bio pour le moment..."
                 className="w-full rounded-lg bg-gray-100 p-2 min-h-[80px]"
-              >
-Aucune bio pour le moment...
-              </textarea>
+              />
             </div>
           </div>
         </section>
