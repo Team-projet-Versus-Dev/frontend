@@ -1,6 +1,9 @@
 /**
  * API d'authentification
- * Gestion sécurisée des appels au backend pour login/signup
+ * 
+ * À la connexion/inscription, l'utilisateur reçoit :
+ * - Un token JWT (pour l'authentification)
+ * - Un CODE DE DÉCHIFFREMENT (pour voir les titres des questionnaires)
  */
 
 export type AuthResponse = {
@@ -10,30 +13,90 @@ export type AuthResponse = {
     createdAt?: string;
   };
   accessToken: string;
+  decryptionCode: string;  // ← Le code pour déchiffrer les titres !
 };
 
-// URL de base de l'API (avec le préfixe /api)
 const API_BASE = "http://localhost:3000/api";
 
-// --- Helpers sécurité/robustesse ---
+// Stockage du token et du code
+let authToken: string | null = null;
+let decryptionCode: string | null = null;
 
 /**
- * Normalise l'email (trim + lowercase)
+ * Définit le token d'authentification
  */
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('authToken', token);
+  } else {
+    localStorage.removeItem('authToken');
+  }
+}
+
+/**
+ * Définit le code de déchiffrement
+ */
+export function setDecryptionCode(code: string | null): void {
+  decryptionCode = code;
+  if (code) {
+    localStorage.setItem('decryptionCode', code);
+  } else {
+    localStorage.removeItem('decryptionCode');
+  }
+}
+
+/**
+ * Récupère le token d'authentification
+ */
+export function getAuthToken(): string | null {
+  if (!authToken) {
+    authToken = localStorage.getItem('authToken');
+  }
+  return authToken;
+}
+
+/**
+ * Récupère le code de déchiffrement
+ */
+export function getDecryptionCode(): string | null {
+  if (!decryptionCode) {
+    decryptionCode = localStorage.getItem('decryptionCode');
+  }
+  return decryptionCode;
+}
+
+/**
+ * Vérifie si l'utilisateur est connecté
+ */
+export function isAuthenticated(): boolean {
+  return getAuthToken() !== null;
+}
+
+/**
+ * Retourne les headers avec le token si connecté
+ */
+export function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+// --- Helpers ---
+
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-/**
- * Validation basique du format email
- */
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/**
- * Lecture sécurisée du JSON de réponse
- */
 async function safeReadJson(res: Response): Promise<unknown> {
   try {
     return await res.json();
@@ -42,9 +105,6 @@ async function safeReadJson(res: Response): Promise<unknown> {
   }
 }
 
-/**
- * Extraction du message d'erreur depuis le corps de la réponse
- */
 function extractErrorMessage(errorBody: unknown): string | null {
   if (typeof errorBody !== 'object' || errorBody === null) return null;
   
@@ -58,9 +118,6 @@ function extractErrorMessage(errorBody: unknown): string | null {
   return null;
 }
 
-/**
- * Wrapper fetch avec timeout et gestion d'erreurs
- */
 async function fetchJson<T>(
   url: string,
   options: RequestInit & { timeoutMs?: number } = {}
@@ -75,9 +132,8 @@ async function fetchJson<T>(
       ...init,
       signal: controller.signal,
       cache: "no-store",
-      credentials: "same-origin",
       headers: {
-        "Content-Type": "application/json",
+        ...getAuthHeaders(),
         ...(init.headers ?? {}),
       },
     });
@@ -108,12 +164,11 @@ async function fetchJson<T>(
 
 /**
  * Inscription d'un nouvel utilisateur
- * POST /api/auth/signup
+ * Retourne le token ET le code de déchiffrement
  */
 export async function register(email: string, password: string): Promise<AuthResponse> {
   const normalizedEmail = normalizeEmail(email);
 
-  // Validation côté client (le backend valide aussi)
   if (!isValidEmail(normalizedEmail)) {
     throw new Error("Email invalide.");
   }
@@ -121,15 +176,21 @@ export async function register(email: string, password: string): Promise<AuthRes
     throw new Error("Mot de passe trop court (8 caractères minimum).");
   }
 
-  return fetchJson<AuthResponse>(`${API_BASE}/auth/signup`, {
+  const response = await fetchJson<AuthResponse>(`${API_BASE}/auth/signup`, {
     method: "POST",
     body: JSON.stringify({ email: normalizedEmail, password }),
   });
+
+  // Stocker le token ET le code de déchiffrement
+  setAuthToken(response.accessToken);
+  setDecryptionCode(response.decryptionCode);
+  
+  return response;
 }
 
 /**
  * Connexion d'un utilisateur existant
- * POST /api/auth/login
+ * Retourne le token ET le code de déchiffrement
  */
 export async function login(email: string, password: string): Promise<AuthResponse> {
   const normalizedEmail = normalizeEmail(email);
@@ -141,8 +202,22 @@ export async function login(email: string, password: string): Promise<AuthRespon
     throw new Error("Mot de passe requis.");
   }
 
-  return fetchJson<AuthResponse>(`${API_BASE}/auth/login`, {
+  const response = await fetchJson<AuthResponse>(`${API_BASE}/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email: normalizedEmail, password }),
   });
+
+  // Stocker le token ET le code de déchiffrement
+  setAuthToken(response.accessToken);
+  setDecryptionCode(response.decryptionCode);
+  
+  return response;
+}
+
+/**
+ * Déconnexion - Efface le token et le code
+ */
+export function logout(): void {
+  setAuthToken(null);
+  setDecryptionCode(null);
 }
