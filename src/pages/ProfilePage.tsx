@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import { Key, Copy, Check } from "lucide-react";
+import { getDecryptionCode } from "../api/authApi";
 
 type ProfilePageProps = {
   user: {
@@ -19,9 +21,20 @@ const formatDate = (isoDate?: string) => {
 };
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack, onLogout }) => {
+  const decryptionCode = getDecryptionCode();
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  const handleCopyCode = () => {
+    if (decryptionCode) {
+      navigator.clipboard.writeText(decryptionCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header simple avec bouton retour */}
+      {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
@@ -70,6 +83,69 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack, onLogout }) => 
           </div>
         </section>
 
+        {/* CODE DE DÉCHIFFREMENT */}
+        <section className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 shadow-sm rounded-2xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+              <Key className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-green-800 mb-1">
+                🔐 Votre code de déchiffrement
+              </h3>
+              <p className="text-sm text-green-700 mb-4">
+                Utilisez ce code pour déchiffrer les titres des questionnaires sur la page d'accueil.
+              </p>
+              
+              <div className="bg-white rounded-xl p-4 inline-flex items-center gap-4">
+                <span className="text-2xl font-mono font-bold text-gray-900 tracking-widest">
+                  {decryptionCode || "N/A"}
+                </span>
+                <button
+                  onClick={handleCopyCode}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  title="Copier le code"
+                >
+                  {codeCopied ? (
+                    <Check className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <Copy className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+              </div>
+              
+              {codeCopied && (
+                <p className="text-xs text-green-600 mt-2">✓ Code copié dans le presse-papiers !</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Explication du chiffrement */}
+        <section className="bg-white shadow-sm rounded-2xl p-6">
+          <h3 className="text-lg font-semibold mb-4">🔒 Comment fonctionne le chiffrement ?</h3>
+          
+          <div className="space-y-4 text-sm text-gray-700">
+            <div className="flex gap-3">
+              <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold">1</span>
+              <p>Les titres des questionnaires sont <strong>chiffrés avec AES-256-GCM</strong> dans la base de données.</p>
+            </div>
+            <div className="flex gap-3">
+              <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold">2</span>
+              <p>Sans le code, les titres apparaissent <strong>masqués</strong> (ex: "Na**********").</p>
+            </div>
+            <div className="flex gap-3">
+              <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold">3</span>
+              <p>En entrant votre code, le titre est <strong>déchiffré</strong> et devient visible.</p>
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+            <strong>💡 Astuce :</strong> Sur la page d'accueil, cliquez sur "Utiliser mon code" 
+            pour remplir automatiquement le champ de déchiffrement.
+          </div>
+        </section>
+
         {/* Informations personnelles */}
         <section className="bg-white shadow-sm rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between mb-2">
@@ -96,47 +172,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack, onLogout }) => 
                 className="w-full rounded-lg bg-gray-100 p-2"
               />
             </div>
-            <div>
-              <p className="text-gray-500 mb-1">Date de naissance</p>
-              <input
-                disabled
-                defaultValue="Non renseignée"
-                className="w-full rounded-lg bg-gray-100 p-2"
-              />
-            </div>
-            <div>
-              <p className="text-gray-500 mb-1">Localisation</p>
-              <input
-                disabled
-                defaultValue="Non renseignée"
-                className="w-full rounded-lg bg-gray-100 p-2"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-gray-500 mb-1">Bio</p>
-              <textarea
-                disabled
-                defaultValue="Aucune bio pour le moment..."
-                className="w-full rounded-lg bg-gray-100 p-2 min-h-[80px]"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Historique des votes */}
-        <section className="bg-white shadow-sm rounded-2xl p-6 text-center text-gray-500 space-y-1">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Historique des votes</h3>
-            <span className="text-xs rounded-full bg-gray-100 px-2 py-0.5">0</span>
-          </div>
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-              📈
-            </div>
-            <p>Aucun vote pour le moment</p>
-            <p className="text-sm">
-              Commence à voter pour voir ton historique ici
-            </p>
           </div>
         </section>
 
