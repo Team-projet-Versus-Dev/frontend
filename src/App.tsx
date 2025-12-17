@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import HomePage from "./pages/HomePage";
 import VersusDetailPage from "./pages/VersusDetailPage";
 import VersusResultPage from "./pages/VersusResultPage";
@@ -8,6 +8,7 @@ import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
 import type { Versus } from "./types/versus";
 import type { AuthResponse } from "./api/authApi";
+import { logout, getAuthToken, setAuthToken } from "./api/authApi";
 
 type AppView = "home" | "detail" | "result" | "create" | "login" | "register" | "profile";
 
@@ -16,8 +17,29 @@ const App: React.FC = () => {
   const [selectedVersus, setSelectedVersus] = useState<Versus | null>(null);
   const [userChoice, setUserChoice] = useState<"A" | "B" | null>(null);
   const [auth, setAuth] = useState<AuthResponse | null>(null);
-
   const [versusItems, setVersusItems] = useState<Versus[]>([]);
+
+  // Restaurer la session au chargement
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      // On pourrait décoder le JWT pour récupérer les infos utilisateur
+      // Pour l'instant, on simule juste la connexion
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setAuth({
+          accessToken: token,
+          user: {
+            id: payload.sub,
+            email: payload.email,
+          }
+        });
+      } catch (e) {
+        // Token invalide, on le supprime
+        setAuthToken(null);
+      }
+    }
+  }, []);
 
   const handleSelectVersus = (versus: Versus) => {
     setSelectedVersus(versus);
@@ -43,6 +65,14 @@ const App: React.FC = () => {
   const handleAuthSuccess = (authResponse: AuthResponse) => {
     setAuth(authResponse);
     setCurrentView("home");
+  };
+
+  const handleLogout = () => {
+    logout();
+    setAuth(null);
+    setCurrentView("home");
+    // Forcer le rechargement pour mettre à jour l'état des titres chiffrés
+    window.location.reload();
   };
 
   const handleSaveNewVersus = (newVersus: Versus) => {
@@ -87,10 +117,7 @@ const App: React.FC = () => {
         <ProfilePage
           user={auth.user}
           onBack={() => setCurrentView("home")}
-          onLogout={() => {
-            setAuth(null);
-            setCurrentView("home");
-          }}
+          onLogout={handleLogout}
         />
       )}
 
